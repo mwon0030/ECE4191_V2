@@ -5,9 +5,10 @@ import numpy as np
 from std_msgs.msg import Float32, Bool, Float32MultiArray, String
 
 class System():
-  def __init__(self, colour_to_goal_location_map, start_location):
+  def __init__(self, colour_to_goal_location_map, start_location, goal_locations):
 
     self.colour_to_goal_location_map = colour_to_goal_location_map
+    self.goal_locations = goal_locations
     self.start_location = start_location
     self.front_left_sensor_dist = 200 
     self.front_right_sensor_dist = 200
@@ -84,12 +85,12 @@ class System():
     distance_to_drive = self.distance_from_goal(goal)
     
     while distance_to_drive >= self.dist_threshold:
-      self.drive(0.4, -0.4)
+      self.drive(0.4, 0.4)
       
-      # obstacle avoidance
-      if self.obstacle_detected and distance_to_drive > 20:
-        print('obstacle detected')
-        self.obstacle_avoidance(goal)
+      # # obstacle avoidance
+      # if self.obstacle_detected and distance_to_drive > 20:
+      #   print('obstacle detected')
+      #   self.obstacle_avoidance(goal)
 
       distance_to_drive = self.distance_from_goal(goal)
       print("dist error: ", distance_to_drive) 
@@ -97,7 +98,7 @@ class System():
     while self.left_motor_speed != 0.0 and self.right_motor_speed != 0.0:
       self.drive(0,0)
 
-  def drive_straight(self, motor_signal = 0.4):
+  def drive_straight(self, motor_signal = 0.5):
       self.set_left_motor_speed_pub.publish(motor_signal)
       self.set_right_motor_speed_pub.publish(motor_signal)
 
@@ -111,22 +112,22 @@ class System():
     angle_error = abs(goal_angle - self.th)
 
     while angle_error > self.angle_threshold:
-      motor_turn_speed_control_signal = 0.20
+      motor_turn_speed_control_signal = 0.5
 
       if goal_angle > self.th:
-        self.drive(-motor_turn_speed_control_signal, -motor_turn_speed_control_signal)
+        self.drive(-motor_turn_speed_control_signal, motor_turn_speed_control_signal)
         
       elif goal_angle < self.th:
-        self.drive(motor_turn_speed_control_signal, motor_turn_speed_control_signal)
+        self.drive(motor_turn_speed_control_signal, -motor_turn_speed_control_signal)
 
       angle_error = abs(goal_angle - self.th)
       self.turning_pub.publish(self.is_turning)
     
-    while self.left_motor_speed != 0.0 and self.right_motor_speed != 0.0:
+    while self.left_motor_speed > 0.1 and self.right_motor_speed > 0.1:
       self.drive(0,0)
     
     print("Turn Complete")
-    rospy.sleep(0.5)
+    # rospy.sleep(0.5)
         
     # self.set_left_motor_speed_pub.publish(0)
     # self.set_right_motor_speed_pub.publish(0)
@@ -165,24 +166,24 @@ class System():
 
   
   def path_planning(self):
-    
-    # goal_location = self.determine_goal_location()
-    goal_location = [30,90]
+    for goal_location in goal_locations:
+      # goal_location = self.determine_goal_location()
+      # goal_location = [90,80]
 
-    self.drive_to_waypoint(goal_location)
-    
-    # Stop when waypoint is reached
-    self.set_left_motor_speed_pub.publish(0)
-    self.set_right_motor_speed_pub.publish(0) 
+      self.drive_to_waypoint(goal_location)
+      
+      # Stop when waypoint is reached
+      self.set_left_motor_speed_pub.publish(0)
+      self.set_right_motor_speed_pub.publish(0) 
 
-    print("Goal reached!") 
+      print("Goal reached!") 
 
-    ## commence delivery
-    rospy.sleep(10)
+      ## commence delivery
+      # rospy.sleep(10)
 
-    print("Driving home")
+      print("Driving home")
 
-    self.drive_to_waypoint(self.start_location)
+      self.drive_to_waypoint(self.start_location)
 
   
   def obstacle_avoidance(self, goal):
@@ -249,10 +250,13 @@ class System():
 if __name__ == "__main__":
   rospy.init_node('system')
   colour_to_goal_location_map = {'red': [90, 80], 'green': [25, 80]}
-  start_location = [20,30]
-  robot = System(colour_to_goal_location_map, start_location)
+  goal_locations = [[90, 80], [30, 80]]
+  start_location = [90,20]
+  robot = System(colour_to_goal_location_map, start_location, goal_locations)
   rospy.sleep(1)
   
-  # robot.path_planning()
-  while not rospy.is_shutdown():
-    robot.drive_straight()
+  robot.path_planning()
+  # robot.drive_to_waypoint([30,63])
+  # robot.turn(0)
+  # while not rospy.is_shutdown():
+  #   robot.drive_straight()

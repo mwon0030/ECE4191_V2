@@ -14,7 +14,7 @@ class Encoder:
         self.prev_number_of_steps = 0
         self.encoder_pub = rospy.Publisher(motor_name, Float32, queue_size=1)
         self.prev_speed = 0
-        self.weight = 0.25
+        self.weight = 0.75
         
     ## NOTE: need to add delay between consecutive readings
     def publish_motor_speed(self):
@@ -27,6 +27,8 @@ class Encoder:
         self.prev_time = current_time
         
         new_speed = (1- self.weight)*motor_speed + self.weight*self.prev_speed
+
+        self.prev_speed = new_speed
         self.encoder_pub.publish( new_speed)
         
         rospy.sleep(0.07)

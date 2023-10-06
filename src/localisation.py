@@ -10,9 +10,9 @@ class Localisation():
     self.length = 25 # in cm
     self.width = 21
     self.max_arena_size = [120, 120] # arena dimensions based on home arena 
-    self.wheel_rad = 2.715
+    self.wheel_rad = 3.21
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 21.3 # the distance between the left and right wheels
+    self.wheel_width = 30 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
@@ -21,9 +21,9 @@ class Localisation():
     self.right_dist = 200
     self.left_motor_speed = 0
     self.right_motor_speed = 0
-    self.x = 30
+    self.x = 90
     self.y = 20
-    self.th = np.pi/4
+    self.th = np.pi/2
     self.turning = False
     self.send_msg = Float32MultiArray()
     
@@ -75,23 +75,9 @@ class Localisation():
   
   def localise_motor(self): # Localisation relying only on motors
     self.time = time.time() - self.prev_time
-    self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
-    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
-    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
-    self.prev_time = time.time()
-    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
-    # print("5")
-    # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
-    # self.th = self.clamp_angle(self.th)
-    self.send_msg.data = [self.x, self.y, self.th]
-    self.state_pub.publish(self.send_msg)
-    rospy.sleep(0.07)
-    
-  def localise_motor_turn(self): # Localisation relying only on motors
-    self.time = time.time() - self.prev_time
-    self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
-    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
-    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.sin(self.th)
+    self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
+    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
+    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
     self.prev_time = time.time()
     print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
