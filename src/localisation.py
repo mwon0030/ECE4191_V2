@@ -49,11 +49,17 @@ class Localisation():
     
     self.prev_time = time.time()
 
-    # get from json file from calibration script
-    self.left_motor_duty_cycle_to_motor_speed = {0.4: 0.38}
-    self.right_motor_duty_cycle_to_motor_speed = {0.4: 0.38}
+    # loading left motor duty_cycle to motor speed mapping
+    file_name = "left_motor_duty_cycle_to_speeds.json"
+    with open(file_name, "r") as json_file:
+        self.left_motor_duty_cycle_to_motor_speed = json.load(json_file)
 
-  
+    # loading right motor duty cycle to motor speed mapping
+    file_name = "right_motor_duty_cycle_to_speeds.json"
+    with open(file_name, "r") as json_file:
+        self.right_motor_duty_cycle_to_motor_speed = json.load(json_file)
+
+    
   def ds_front_left_cb(self, data):
     self.front_left_dist = round(data.data, 4)
     
