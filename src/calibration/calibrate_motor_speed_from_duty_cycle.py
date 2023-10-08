@@ -3,6 +3,7 @@ from time import sleep, time
 import rospy
 from std_msgs.msg import Float32, Bool
 import json
+import pandas as pd
 
 class Encoder: 
     pulses_per_wheel_rotation = 75*12 # 75 turns of encoder is 1 rotation of wheel, 12 pulses per encoder rotation
@@ -83,8 +84,11 @@ if __name__ == "__main__":
     test_time = 3
     start_recording_time = 0.3
     
+    left_motor_duty_cycle_to_avg_motor_speed = {}
+    right_motor_duty_cycle_to_avg_motor_speed = {} 
+
     left_motor_duty_cycle_to_motor_speed = {}
-    right_motor_duty_cycle_to_motor_speed = {}
+    right_motor_duty_cycle_to_motor_speed = {} 
 
     for duty_cycle in duty_cycles_to_test:
         start_time = time()
@@ -92,6 +96,11 @@ if __name__ == "__main__":
 
         left_motor_speeds = []
         right_motor_speeds = [] 
+
+        left_motor_duty_cycle_to_motor_speed[duty_cycle] = []
+        right_motor_duty_cycle_to_motor_speed[duty_cycle] = []
+
+
 
         while test_time_elapsed < test_time: 
             left_motor_control.set_motor_speed(duty_cycle)
@@ -104,24 +113,36 @@ if __name__ == "__main__":
 
             test_time_elapsed = time() - start_time
 
-        left_motor_duty_cycle_to_motor_speed[duty_cycle] = sum(left_motor_speeds)/len(left_motor_speeds)
-        right_motor_duty_cycle_to_motor_speed[duty_cycle] = sum(right_motor_speeds)/len(right_motor_speeds)
+            left_motor_duty_cycle_to_motor_speed[duty_cycle].append(left_motor_speeds[-1])
+            right_motor_duty_cycle_to_motor_speed[duty_cycle].append(right_motor_speeds[-1])
 
 
-    # Specify the file name where you want to save the dictionary
+        left_motor_duty_cycle_to_avg_motor_speed[duty_cycle] = sum(left_motor_speeds)/len(left_motor_speeds)
+        right_motor_duty_cycle_to_avg_motor_speed[duty_cycle] = sum(right_motor_speeds)/len(right_motor_speeds)
+
+
+
+
+    ### left motor
+    left_motor_speed_df = pd.DataFrame(left_motor_duty_cycle_to_motor_speed)
+    excel_file_path = "left_motor_duty_cycle_to_motor_speed.xlsx"
+    left_motor_speed_df.to_excel(excel_file_path, index=False)
+
     file_name = "left_motor_duty_cycle_to_speeds.json"
 
-    # Open the file in write mode and save the dictionary as JSON
     with open(file_name, "w") as json_file:
-        json.dump(left_motor_duty_cycle_to_motor_speed, json_file)
+        json.dump(left_motor_duty_cycle_to_avg_motor_speed, json_file)
+        
 
+    ### right motor
+    right_motor_speed_dt = pd.DataFrame(right_motor_duty_cycle_to_motor_speed)
+    excel_file_path = "right_motor_duty_cycle_to_motor_speed.xlsx"
+    right_motor_speed_dt.to_excel(excel_file_path, index=False)
 
-    # Specify the file name where you want to save the dictionary
     file_name = "right_motor_duty_cycle_to_speeds.json"
 
-    # Open the file in write mode and save the dictionary as JSON
     with open(file_name, "w") as json_file:
-        json.dump(right_motor_duty_cycle_to_motor_speed, json_file)
+        json.dump(left_motor_duty_cycle_to_avg_motor_speed, json_file)
 
 
 
