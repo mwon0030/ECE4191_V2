@@ -4,6 +4,7 @@ import rospy
 from std_msgs.msg import Float32, Bool, Float32MultiArray
 import time
 import numpy as np
+import json 
 
 class Localisation():
   def __init__(self):
@@ -26,6 +27,11 @@ class Localisation():
     self.th = np.pi/2
     self.turning = False
     self.send_msg = Float32MultiArray()
+
+    self.ref_left_motor_speed = 0
+
+    self.ref_right_motor_speed = 0
+
     
     self.state_pub = rospy.Publisher('state', Float32MultiArray, queue_size=1)
     
@@ -37,8 +43,16 @@ class Localisation():
     self.right_motor_sub = rospy.Subscriber('/right_motor', Float32, self.right_motor_cb)
     self.turning_sub = rospy.Subscriber('/turning', Bool, self.turning_cb)
     # self.obstacle_detection_sub = rospy.Subscriber('/')
+    self.set_motor_speed_sub = rospy.Subscriber('/set_' + 'left_motor' + '_speed', Float32, self.set_left_motor_speed_cb)
+    self.set_motor_speed_sub = rospy.Subscriber('/set_' + 'right_motor' + '_speed', Float32, self.set_right_motor_speed_cb)
+
     
     self.prev_time = time.time()
+
+    # get from json file from calibration script
+    self.left_motor_duty_cycle_to_motor_speed = {0.4: 0.38}
+    self.right_motor_duty_cycle_to_motor_speed = {0.4: 0.38}
+
   
   def ds_front_left_cb(self, data):
     self.front_left_dist = round(data.data, 4)
@@ -60,6 +74,12 @@ class Localisation():
     
   def turning_cb(self, data):
     self.turning = data.data
+
+  def set_left_motor_speed_cb(self, data):
+      self.ref_left_motor_speed = data.data
+
+  def set_right_motor_speed_cb(self, data):
+      self.ref_right_motor_speed = data.data
   
   def init_localise(self):
     for _ in range(10):
@@ -75,9 +95,13 @@ class Localisation():
   
   def localise_motor(self): # Localisation relying only on motors
     self.time = time.time() - self.prev_time
-    self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
-    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
-    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
+
+    left_motor_speed = self.left_motor_duty_cycle_to_motor_speed[self.ref_left_motor_speed]
+    right_motor_speed = self.right_motor_duty_cycle_to_motor_speed[self.ref_right_motor_speed]
+
+    self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
+    self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
+    self.y = self.y + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
     self.prev_time = time.time()
     print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
