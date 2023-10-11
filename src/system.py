@@ -3,6 +3,7 @@
 import rospy
 import numpy as np
 from std_msgs.msg import Float32, Bool, Float32MultiArray, String
+import time
 
 class System():
   def __init__(self, colour_to_goal_location_map, start_location, goal_locations):
@@ -23,8 +24,8 @@ class System():
     self.obstacle_detected = False
     
 
-    self.dist_threshold = 3
-    self.angle_threshold = np.pi/50
+    self.dist_threshold = 0.5
+    self.angle_threshold = np.pi/180
 
     self.max_arena_size = 120
     
@@ -83,7 +84,7 @@ class System():
     self.turn(goal_angle)
     
     distance_to_drive = self.distance_from_goal(goal)
-    
+    prev_distance_to_drive = distance_to_drive 
     while distance_to_drive >= self.dist_threshold:
       self.drive(0.4, 0.4)
       
@@ -93,12 +94,21 @@ class System():
       #   self.obstacle_avoidance(goal)
 
       distance_to_drive = self.distance_from_goal(goal)
+
+      if distance_to_drive > prev_distance_to_drive: 
+        break
+
+      prev_distance_to_drive = distance_to_drive
       print("dist error: ", distance_to_drive) 
 
-    while self.left_motor_speed != 0.0 and self.right_motor_speed != 0.0:
-      self.drive(0,0)
+    print("Drive complete")
+    
+    while round(self.left_motor_speed, 4) > 0.0 or round(self.right_motor_speed, 4) > 0.0:
+      self.drive(0.0,0.0)
+      
+    
 
-  def drive_straight(self, motor_signal = 0.5):
+  def drive_straight(self, motor_signal = 0.4):
       self.set_left_motor_speed_pub.publish(motor_signal)
       self.set_right_motor_speed_pub.publish(motor_signal)
 
@@ -112,7 +122,7 @@ class System():
     angle_error = abs(goal_angle - self.th)
 
     while angle_error > self.angle_threshold:
-      motor_turn_speed_control_signal = 0.5
+      motor_turn_speed_control_signal = 0.4
 
       if goal_angle > self.th:
         self.drive(-motor_turn_speed_control_signal, motor_turn_speed_control_signal)
@@ -123,11 +133,18 @@ class System():
       angle_error = abs(goal_angle - self.th)
       self.turning_pub.publish(self.is_turning)
     
-    while self.left_motor_speed > 0.1 and self.right_motor_speed > 0.1:
-      self.drive(0,0)
-    
     print("Turn Complete")
-    # rospy.sleep(0.5)
+    
+    while round(self.left_motor_speed, 4) > 0.0 or round(self.right_motor_speed, 4) > 0.0:
+      self.drive(0.0,0.0)
+    
+    # temp_time = time.time()
+    # while (time.time() - temp_time) < 3:
+    #   self.drive(0,0)
+    # rospy.sleep(5)
+      
+    
+    
         
     # self.set_left_motor_speed_pub.publish(0)
     # self.set_right_motor_speed_pub.publish(0)
@@ -179,7 +196,6 @@ class System():
       print("Goal reached!") 
 
       ## commence delivery
-      # rospy.sleep(10)
 
       print("Driving home")
 
@@ -214,13 +230,13 @@ class System():
         # turn in the direction which avoids obstacle (still want to be travelling forward to avoid)
         if left_score > right_score:
           print('turning right to avoid obstacle') 
-          left_motor_speed = 0.2
+          left_motor_speed = 0.3
           right_motor_speed = 0.4*left_score
 
         elif left_score < right_score: 
           print('turning left to avoid obstacle')
           left_motor_speed = 0.4*right_score
-          right_motor_speed = 0.2
+          right_motor_speed = 0.3
 
         # when left score and right score are equal 
         else: 
@@ -244,13 +260,13 @@ class System():
     print("goal angle: ", goal_angle)
     self.turn(goal_angle)
 
-    rospy.sleep(5)
+    # rospy.sleep(5)
 
 
 if __name__ == "__main__":
   rospy.init_node('system')
   colour_to_goal_location_map = {'red': [90, 80], 'green': [25, 80]}
-  goal_locations = [[90, 80], [30, 80]]
+  goal_locations = [[90, 80]]
   start_location = [90,20]
   robot = System(colour_to_goal_location_map, start_location, goal_locations)
   rospy.sleep(1)
@@ -258,5 +274,10 @@ if __name__ == "__main__":
   robot.path_planning()
   # robot.drive_to_waypoint([30,63])
   # robot.turn(0)
+  # robot.turn(-np.pi/2)
+  # robot.turn(0)
+  # robot.turn(np.pi/2)
+  
+  
   # while not rospy.is_shutdown():
   #   robot.drive_straight()

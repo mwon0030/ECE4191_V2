@@ -20,6 +20,7 @@ class MotorControl:
         
         self.current_motor_speed = 0
         self.ref_motor_speed = 0
+        # self.prev_motor_speed = 0
         
         self.turning = False
         
@@ -40,19 +41,26 @@ class MotorControl:
       self.motor_EN.off()
 
     def set_motor_speed(self):
-        if self.ref_motor_speed > 0: 
-            self.motor_PWM1.value = self.ref_motor_speed
-            self.motor_PWM2.value = 0
-            # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
+      # if abs(self.ref_motor_speed) > 1: 
+      #   self.ref_motor_speed = self.prev_motor_speed
 
-        elif self.ref_motor_speed < 0: 
-            self.motor_PWM1.value = 0
-            self.motor_PWM2.value = -self.ref_motor_speed
-            # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
-            
-        else: 
-            self.motor_PWM1.value = 0
-            self.motor_PWM2.value = 0
+      motor_speed = self.ref_motor_speed
+      # print("right motor ref speed: ", self.ref_motor_speed)
+      if self.ref_motor_speed > 0.0: 
+          self.motor_PWM1.value = motor_speed
+          self.motor_PWM2.value = 0.0
+          # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
+
+      elif self.ref_motor_speed < 0.0: 
+          self.motor_PWM1.value = 0.0
+          self.motor_PWM2.value = -motor_speed
+          # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
+          
+      else: 
+          self.motor_PWM1.value = 0.0
+          self.motor_PWM2.value = 0.0
+
+      # self.prev_motor_speed = self.ref_motor_speed
                 
     def is_turning(self):
         return self.turning

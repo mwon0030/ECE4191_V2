@@ -11,9 +11,9 @@ class Localisation():
     self.length = 25 # in cm
     self.width = 21
     self.max_arena_size = [120, 120] # arena dimensions based on home arena 
-    self.wheel_rad = 3.21
+    self.wheel_rad = 2.72
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 30 # the distance between the left and right wheels
+    self.wheel_width = 26.8 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
@@ -50,12 +50,12 @@ class Localisation():
     self.prev_time = time.time()
 
     # loading left motor duty_cycle to motor speed mapping
-    file_name = "left_motor_duty_cycle_to_speeds.json"
+    file_name = "/home/mtjp27/left_motor_duty_cycle_to_speeds.json" 
     with open(file_name, "r") as json_file:
         self.left_motor_duty_cycle_to_motor_speed = json.load(json_file)
 
     # loading right motor duty cycle to motor speed mapping
-    file_name = "right_motor_duty_cycle_to_speeds.json"
+    file_name = "/home/mtjp27/right_motor_duty_cycle_to_speeds.json"
     with open(file_name, "r") as json_file:
         self.right_motor_duty_cycle_to_motor_speed = json.load(json_file)
 
@@ -102,8 +102,9 @@ class Localisation():
   def localise_motor(self): # Localisation relying only on motors
     self.time = time.time() - self.prev_time
 
-    left_motor_speed = self.left_motor_duty_cycle_to_motor_speed[self.ref_left_motor_speed]
-    right_motor_speed = self.right_motor_duty_cycle_to_motor_speed[self.ref_right_motor_speed]
+    left_motor_speed = self.left_motor_duty_cycle_to_motor_speed[str(round(self.ref_left_motor_speed,1))]
+
+    right_motor_speed = self.right_motor_duty_cycle_to_motor_speed[str(round(self.ref_right_motor_speed,1))]
 
     self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
     self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
