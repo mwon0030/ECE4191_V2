@@ -95,15 +95,19 @@ if __name__ == "__main__":
     right_motor_control.enable_motor()
 
 
-    duty_cycles_to_test = [0.4, -0.4, 0.6, -0.6]
+    # duty_cycles_to_test = [0.4, -0.4, 0.6, -0.6, 0.8, -0.8]
+    duty_cycles_to_test = [0.15, -0.15]
     test_time = 10
     start_recording_time = 0
     
     left_motor_duty_cycle_to_avg_motor_speed = {}
     right_motor_duty_cycle_to_avg_motor_speed = {} 
+    duty_cycle_to_avg_motor_speed = {}
 
     left_motor_duty_cycle_to_motor_speed = {}
     right_motor_duty_cycle_to_motor_speed = {} 
+    
+    
 
     for duty_cycle in duty_cycles_to_test:
         start_time = time()
@@ -132,10 +136,12 @@ if __name__ == "__main__":
 
             test_time_elapsed = time() - start_time
 
-
+        
 
         left_motor_duty_cycle_to_avg_motor_speed[duty_cycle] = sum(left_motor_speeds)/len(left_motor_speeds)
         right_motor_duty_cycle_to_avg_motor_speed[duty_cycle] = sum(right_motor_speeds)/len(right_motor_speeds)
+        
+        duty_cycle_to_avg_motor_speed[duty_cycle] = (sum(left_motor_speeds)/len(left_motor_speeds) + sum(right_motor_speeds)/len(right_motor_speeds))/2
 
 
 
@@ -148,7 +154,7 @@ if __name__ == "__main__":
     file_name = "left_motor_duty_cycle_to_speeds.json"
 
     with open(file_name, "w") as json_file:
-        json.dump(left_motor_duty_cycle_to_avg_motor_speed, json_file)
+        json.dump(duty_cycle_to_avg_motor_speed, json_file)
         
 
     ### right motor
@@ -159,7 +165,7 @@ if __name__ == "__main__":
     file_name = "right_motor_duty_cycle_to_speeds.json"
 
     with open(file_name, "w") as json_file:
-        json.dump(right_motor_duty_cycle_to_avg_motor_speed, json_file)
+        json.dump(duty_cycle_to_avg_motor_speed, json_file)
 
 
 

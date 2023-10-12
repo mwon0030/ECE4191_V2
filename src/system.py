@@ -52,7 +52,7 @@ class System():
     # self.colour_sensor_trigger_pub = rospy.Publisher('colour_sensor_trigger', Bool, queue_size=1)
     # self.package_colour_detected_sub = rospy.Subscriber('/package_colour', String, self.package_colour_detected_cb)
  
-
+    self.default_motor_speed  = 0.8
 
   def ds_front_left_cb(self, data):
     self.front_left_sensor_dist = data.data
@@ -92,7 +92,7 @@ class System():
     distance_to_drive = self.distance_from_goal(goal)
     prev_distance_to_drive = distance_to_drive 
     while distance_to_drive >= self.dist_threshold:
-      self.drive(0.4, 0.4)
+      self.drive(self.default_motor_speed, self.default_motor_speed)
       
       # # obstacle avoidance
       # if self.obstacle_detected and distance_to_drive > 20:
@@ -109,31 +109,24 @@ class System():
 
     print("Drive complete")
     
-    self.drive_stop()
+    self.stop()
       
-    
-
-  def drive_straight(self, motor_speed = 0.4):
-      self.set_left_motor_speed_pub.publish(motor_speed)
-      self.set_right_motor_speed_pub.publish(motor_speed)
 
   def drive(self, left_motor_speed, right_motor_speed):
       self.set_left_motor_speed_pub.publish(left_motor_speed)
       self.set_right_motor_speed_pub.publish(right_motor_speed)
 
-  def drive_stop(self):
+  def stop(self):
     while round(self.left_motor_speed, 4) > 0.0 or round(self.right_motor_speed, 4) > 0.0:
       self.drive(0.0,0.0)
     print("stopped")
       
-  def turn(self, goal_angle):
+  def turn(self, goal_angle, stop = True, motor_turn_speed_control_signal = 0.4):
     self.is_turning = True
     self.turning_pub.publish(self.is_turning)
     angle_error = abs(goal_angle - self.th)
 
     while angle_error > self.angle_threshold:
-      motor_turn_speed_control_signal = 0.4
-
       if goal_angle > self.th:
         self.drive(-motor_turn_speed_control_signal, motor_turn_speed_control_signal)
         
@@ -144,6 +137,9 @@ class System():
       self.turning_pub.publish(self.is_turning)
     
     print("Turn Complete")
+    
+    if stop:
+      self.stop()
     
     self.is_turning = False
     self.turning_pub.publish(self.is_turning)
@@ -181,30 +177,55 @@ class System():
   def deliver_package(self): 
 
     while self.front_left_sensor_dist > 7.5 or self.front_right_sensor_dist  > 7.5: 
-      self.drive_straight()
+            self.drive(self.default_motor_speed, self.default_motor_speed)
 
-    self.drive_stop()
+
+    self.stop()
 
     # do servo thing 
 
     # drive backwards 
     while self.front_left_sensor_dist < 10 or self.front_right_sensor_dist < 10: 
-      self.drive_straight(motor_speed = -0.4)
+      self.drive(-self.default_motor_speed, -self.default_motor_speed)
     
-    self.drive_stop()
+    self.stop()
 
-  def localise_dist_sensor(self): 
-    # need to align directly to wall 
-    while abs(self.front_left_sensor_dist - self.front_right_sensor_dist) < 1.5: 
+  def align_dist_sensor(self): 
+    prev_diff_distance = abs(self.front_left_sensor_dist - self.front_right_sensor_dist)
+
+    while prev_diff_distance > 1e-3: 
+      current_diff_distance = abs(self.front_left_sensor_dist - self.front_right_sensor_dist)
+      print(f'current_diff_distance: {current_diff_distance}')
+      print(f'prev_diff_distance: {prev_diff_distance}')
+
+      # current_diff_distance = abs(self.front_left_sensor_dist - self.front_right_sensor_dist)
+
       print('aligning distance sensors')
-      if self.front_right_sensor_dist > self.front_right_sensor_dist: 
+
+      if self.front_left_sensor_dist > self.front_right_sensor_dist: 
         # turn right 
-        angle_increments_to_turn = -np.pi/60
+        angle_increments_to_turn = -np.pi/90
       else: 
         # turn left 
-        angle_increments_to_turn = np.pi/60
+        angle_increments_to_turn = np.pi/90
+    
+      self.turn(angle_increments_to_turn + self.th, stop = False, motor_turn_speed_control_signal = 0.1)
 
-      self.turn(angle_increments_to_turn + self.th)
+      
+      
+      if current_diff_distance > prev_diff_distance + 0.4 and current_diff_distance < 5: 
+        print('breaking')
+        break
+
+      prev_diff_distance = current_diff_distance
+      
+      # rospy.sleep(0.025)
+    
+    self.stop()
+    
+  def localise_dist_sensor(self): 
+    # need to align directly to wall 
+    self.align_dist_sensor()
 
     y = self.max_arena_size - (self.front_right_sensor_dist + self.front_right_sensor_dist)/2 - self.robot_length/2
 
@@ -215,10 +236,15 @@ class System():
     else: 
       self.turn(np.pi)
 
+
+    self.stop()
+
+    self.align_dist_sensor()
+
     x = self.max_arena_size - (self.front_right_sensor_dist + self.front_right_sensor_dist)/2 - self.robot_length/2
 
     print(f'x: {x}' )
-    self.turn(-np.pi/2)
+    self.turn(3*np.pi/2)
 
     th = -np.pi/2
 
@@ -251,7 +277,7 @@ class System():
       
       print("Relocalised")
       
-      self.drive_stop()
+      self.stop()
       
       print("Driving home")
 
@@ -307,7 +333,7 @@ class System():
 
         self.drive(left_motor_speed, -right_motor_speed)
       else:
-        self.drive_straight()
+        self.drive(self.default_motor_speed, self.default_motor_speed)
 
       dist_to_travel = self.distance_from_goal([initial_x, initial_y])
 
@@ -324,18 +350,18 @@ class System():
 if __name__ == "__main__":
   rospy.init_node('system')
   colour_to_goal_location_map = {'red': [90, 80], 'green': [25, 80]}
-  goal_locations = [[90, 80]]
-  start_location = [90,20]
+  goal_locations = [[30, 90]]
+  start_location = [30,20]
   robot = System(colour_to_goal_location_map, start_location, goal_locations)
   rospy.sleep(1)
   
-  robot.path_planning()
+  # robot.path_planning()
   # robot.drive_to_waypoint([30,63])
   # robot.turn(0)
   # robot.turn(-np.pi/2)
   # robot.turn(0)
   # robot.turn(np.pi/2)
-  
+  robot.align_dist_sensor()
   
   # while not rospy.is_shutdown():
   #   robot.drive_straight()
