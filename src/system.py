@@ -57,6 +57,8 @@ class System():
  
     self.default_motor_speed  = 0.8
 
+    self.goal_location_publisher = rospy.Publisher('goal_location', Float32MultiArray, queue_size = 1)
+
   def ds_front_left_cb(self, data):
     self.front_left_sensor_dist = data.data
     
