@@ -10,9 +10,10 @@ class Collision():
     self.front_left_sensor_dist = 200
     self.front_right_sensor_dist = 200
     self.right_sensor_dist = 200
-    self.dist_sensor_readings = {'left': self.left_sensor_dist, 'front-left': self.front_left_sensor_dist, 'front-right': self.front_right_sensor_dist, 'right': self.right_sensor_dist}
     
     self.obstacle_dist_threshold = 15
+    self.wall_dist_threshold = 7.5
+
     self.arena_size = [120, 120]
     self.length = 25
     self.width = 21
@@ -23,6 +24,12 @@ class Collision():
     
     # Publisher for obstacle detection
     self.obstacle_detect_pub = rospy.Publisher('obstacle_detect', Bool, queue_size=1)
+    # Publisher for wall detection 
+    self.wall_detect_pub = rospy.Publisher('wall_detect', Bool, queue_size=1)
+
+    self.wall_detected = False
+    self.obstacle_detected = False
+
     
     # Subscribers for sensors
     self.ds_front_left_sub = rospy.Subscriber('/ds_front_left', Float32, self.ds_front_left_cb)
@@ -52,20 +59,30 @@ class Collision():
     
     
   def obstacle_detect(self):
-    number_of_sensors_detecting_obstacle = len([sensor for sensor, dist in self.dist_sensor_readings.items() if dist < self.obstacle_dist_threshold])
+    dist_sensor_readings = {'left': self.left_sensor_dist, 'front-left': self.front_left_sensor_dist, 'front-right': self.front_right_sensor_dist, 'right': self.right_sensor_dist}
+    number_of_sensors_detecting_obstacle = len([sensor for sensor, dist in dist_sensor_readings.items() if dist < self.obstacle_dist_threshold])
 
     is_near_wall = True if self.x < 20 or self.x > 100 or self.y < 20 or self.y > 100 else False 
 
     if is_near_wall and number_of_sensors_detecting_obstacle > 1: 
-      obstacle_detected = True
-    elif not is_near_wall and number_of_sensors_detecting_obstacle: 
-      obstacle_detected = True
+      self.wall_detected = True
     else: 
-      obstacle_detected = False
+      self.wall_detected = False
+
+    dist_sensor_readings = {'left': self.left_sensor_dist, 'front-left': self.front_left_sensor_dist, 'front-right': self.front_right_sensor_dist, 'right': self.right_sensor_dist}
+    number_of_sensors_detecting_wall = len([sensor for sensor, dist in dist_sensor_readings.items() if dist < self.wall_dist_threshold])
+
+    if not is_near_wall and number_of_sensors_detecting_wall: 
+      self.obstacle_detected = True
+    else: 
+      self.obstacle_detected = False
+
     
-    self.obstacle_detect_pub.publish(obstacle_detected)
+    self.obstacle_detect_pub.publish(self.obstacle_detected)
+    self.wall_detect_pub.publish(self.wall_detected)
 
 
+      
 if __name__ == "__main__":
   rospy.init_node('objection_detection')
   obstacle_detection = Collision()

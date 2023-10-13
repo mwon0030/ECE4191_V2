@@ -4,15 +4,16 @@ import rospy
 from std_msgs.msg import Float32, Bool, Float32MultiArray
 import time
 import numpy as np
+import json 
 
 class Localisation():
   def __init__(self):
     self.length = 25 # in cm
     self.width = 21
     self.max_arena_size = [120, 120] # arena dimensions based on home arena 
-    self.wheel_rad = 3.21
+    self.wheel_rad = 2.72
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 30 # the distance between the left and right wheels
+    self.wheel_width = 22.5 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
@@ -21,11 +22,16 @@ class Localisation():
     self.right_dist = 200
     self.left_motor_speed = 0
     self.right_motor_speed = 0
-    self.x = 90
+    self.x = 30
     self.y = 20
     self.th = np.pi/2
     self.turning = False
     self.send_msg = Float32MultiArray()
+
+    self.ref_left_motor_speed = 0
+
+    self.ref_right_motor_speed = 0
+
     
     self.state_pub = rospy.Publisher('state', Float32MultiArray, queue_size=1)
     
@@ -37,9 +43,23 @@ class Localisation():
     self.right_motor_sub = rospy.Subscriber('/right_motor', Float32, self.right_motor_cb)
     self.turning_sub = rospy.Subscriber('/turning', Bool, self.turning_cb)
     # self.obstacle_detection_sub = rospy.Subscriber('/')
+    self.set_motor_speed_sub = rospy.Subscriber('/set_' + 'left_motor' + '_speed', Float32, self.set_left_motor_speed_cb)
+    self.set_motor_speed_sub = rospy.Subscriber('/set_' + 'right_motor' + '_speed', Float32, self.set_right_motor_speed_cb)
+
     
     self.prev_time = time.time()
-  
+
+    # loading left motor duty_cycle to motor speed mapping
+    file_name = "/home/mtjp27/left_motor_duty_cycle_to_speeds.json" 
+    with open(file_name, "r") as json_file:
+        self.left_motor_duty_cycle_to_motor_speed = json.load(json_file)
+
+    # loading right motor duty cycle to motor speed mapping
+    file_name = "/home/mtjp27/right_motor_duty_cycle_to_speeds.json"
+    with open(file_name, "r") as json_file:
+        self.right_motor_duty_cycle_to_motor_speed = json.load(json_file)
+
+    
   def ds_front_left_cb(self, data):
     self.front_left_dist = round(data.data, 4)
     
@@ -60,6 +80,12 @@ class Localisation():
     
   def turning_cb(self, data):
     self.turning = data.data
+
+  def set_left_motor_speed_cb(self, data):
+      self.ref_left_motor_speed = data.data
+
+  def set_right_motor_speed_cb(self, data):
+      self.ref_right_motor_speed = data.data
   
   def init_localise(self):
     for _ in range(10):
@@ -75,9 +101,17 @@ class Localisation():
   
   def localise_motor(self): # Localisation relying only on motors
     self.time = time.time() - self.prev_time
-    self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
-    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
-    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
+
+    # left_motor_speed = self.left_motor_duty_cycle_to_motor_speed[str(round(self.ref_left_motor_speed,1))]
+
+    # right_motor_speed = self.right_motor_duty_cycle_to_motor_speed[str(round(self.ref_right_motor_speed,1))]
+
+    left_motor_speed = self.left_motor_speed
+    right_motor_speed = self.right_motor_speed
+    
+    self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
+    self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
+    self.y = self.y + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
     self.prev_time = time.time()
     print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")

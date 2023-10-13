@@ -31,7 +31,7 @@ class DistanceSensorCluster:
             self.prev_dist[dist_sensor_name] = new_dist
             
             self.distance_sensor_pub[dist_sensor_name].publish(round(self.dist_sensor_name_to_echo[dist_sensor_name].distance * 100, 4))
-        rospy.sleep(0.05)
+        rospy.sleep(0.025)
     
 if __name__ == "__main__":
     rospy.init_node('distance_sensor_cluster')
