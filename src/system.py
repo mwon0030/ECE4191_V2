@@ -22,6 +22,7 @@ class System():
     self.is_turning = False
     self.waypoint_reached = False
     self.obstacle_detected = False
+    self.wall_detected = False
 
     self.robot_length = 25 # in cm
     self.robot_width = 21
@@ -41,6 +42,8 @@ class System():
     self.right_motor = rospy.Subscriber('/right_motor', Float32, self.right_motor_cb)
     self.th = rospy.Subscriber('/state', Float32MultiArray, self.state_cb)
     self.obstacle_detect_sub = rospy.Subscriber('/obstacle_detect', Bool, self.obstacle_detect_cb)
+    self.wall_detect_sub = rospy.Subscriber('/wall_detect', Bool, self.wall_detect_cb)
+
     
     self.turning_pub = rospy.Publisher('turning', Bool, queue_size=1)
     self.set_left_motor_speed_pub = rospy.Publisher('set_left_motor_speed', Float32, queue_size=1)
@@ -80,6 +83,9 @@ class System():
   def obstacle_detect_cb(self, data):
     self.obstacle_detected = data.data
 
+  def wall_detect_cb(self, data):
+    self.wall_detected = data.data
+
   def package_colour_detected_cb(self, data):
     self.package_colour = data.data
 
@@ -96,8 +102,10 @@ class System():
       
       # # obstacle avoidance
       # if self.obstacle_detected and distance_to_drive > 20:
-      #   print('obstacle detected')
-      #   self.obstacle_avoidance(goal)
+      #   self.obstacle_avoidance()
+
+      # if self.wall_detected and distance_to_drive > 20: 
+      #   self.wall_avoidance()
 
       distance_to_drive = self.distance_from_goal(goal)
 
@@ -169,7 +177,9 @@ class System():
 
     # waiting until new colour is detected 
     while not colour_detected: 
-      if self.package_colour: 
+      print('Waiting for colour to be detected....')
+      if self.package_colour is not 'None': 
+        print('Colour detected!')
         colour_detected = True 
 
     return self.colour_to_goal_location_map[self.package_colour]
@@ -193,7 +203,7 @@ class System():
   def align_dist_sensor(self): 
     prev_diff_distance = abs(self.front_left_sensor_dist - self.front_right_sensor_dist)
 
-    while prev_diff_distance > 1e-3: 
+    while prev_diff_distance > 0.1: 
       current_diff_distance = abs(self.front_left_sensor_dist - self.front_right_sensor_dist)
       print(f'current_diff_distance: {current_diff_distance}')
       print(f'prev_diff_distance: {prev_diff_distance}')
@@ -285,66 +295,28 @@ class System():
       
       print("Back in loading zone")
 
-  
-  def obstacle_avoidance(self, goal):
-    # obstacle detection threshold 
-    dist_threshold = 15
+  def obstacle_avoidance(self): 
+    while self.obstacle_detected: 
+      print('Robot detected')
+      self.stop()
 
-    # how far do we want to stay in obstacle avoidance mode
-    dist_to_travel_threshold = 25
-    dist_to_travel = 0
+    print('robot avoided')
 
-    # at what coordinates is obstacle initially detected
-    initial_x = self.x
-    initial_y = self.y
+  def wall_avoidance(self): 
+    self.stop()
+    while self.wall_detected: 
+      print('Wall detected')
 
-    while dist_to_travel < dist_to_travel_threshold: 
-      # find out which sensors are seeing obstacle
-      obstacle_sensors = {sensor:dist for sensor, dist in self.dist.items() if dist < dist_threshold}
-      print(obstacle_sensors)
-      if obstacle_sensors: 
-        # determine which sensor group is seeing the obstacle
-        left_score = len('left' in list(obstacle_sensors.keys()))
-        right_score = len('right' in list(obstacle_sensors.keys())) 
+      if self.x > self.max_arena_size/2: # turn left slowly to avoid obstalce
+          angle_increment_to_turn = np.pi/90
 
-        # updated initial obstacle detected coordinates 
-        initial_x = self.x
-        initial_y = self.y
+      else: # turn right slowl to avoid obstacle
+          angle_increment_to_turn = -np.pi/90
 
-        # turn in the direction which avoids obstacle (still want to be travelling forward to avoid)
-        if left_score > right_score:
-          print('turning right to avoid obstacle') 
-          left_motor_speed = 0.3
-          right_motor_speed = 0.4*left_score
+      self.turn(angle_increment_to_turn + self.th, stop = False, motor_turn_speed_control_signal = 0.1)
 
-        elif left_score < right_score: 
-          print('turning left to avoid obstacle')
-          left_motor_speed = 0.4*right_score
-          right_motor_speed = 0.3
+    print('wall avoided')
 
-        # when left score and right score are equal 
-        else: 
-          left_motor_speed = 0.5
-          right_motor_speed = -0.5
-          if self.x > self.max_arena_size/2: 
-            self.turn(np.pi)
-          else: 
-            self.turn(0)
-
-        self.drive(left_motor_speed, -right_motor_speed)
-      else:
-        self.drive(self.default_motor_speed, self.default_motor_speed)
-
-      dist_to_travel = self.distance_from_goal([initial_x, initial_y])
-
-    print('obstacle avoided. Turning to goal')
-
-    # turn to goal once obstacle is cleared 
-    goal_angle = self.angle_to_turn(goal) + self.th # Relative goal angle + global current angle = global goal angle
-    print("goal angle: ", goal_angle)
-    self.turn(goal_angle)
-
-    # rospy.sleep(5)
 
 
 if __name__ == "__main__":

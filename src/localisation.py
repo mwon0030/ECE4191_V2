@@ -102,10 +102,13 @@ class Localisation():
   def localise_motor(self): # Localisation relying only on motors
     self.time = time.time() - self.prev_time
 
-    left_motor_speed = self.left_motor_duty_cycle_to_motor_speed[str(round(self.ref_left_motor_speed,1))]
+    # left_motor_speed = self.left_motor_duty_cycle_to_motor_speed[str(round(self.ref_left_motor_speed,1))]
 
-    right_motor_speed = self.right_motor_duty_cycle_to_motor_speed[str(round(self.ref_right_motor_speed,1))]
+    # right_motor_speed = self.right_motor_duty_cycle_to_motor_speed[str(round(self.ref_right_motor_speed,1))]
 
+    left_motor_speed = self.left_motor_speed
+    right_motor_speed = self.right_motor_speed
+    
     self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
     self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
     self.y = self.y + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)

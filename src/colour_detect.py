@@ -93,7 +93,7 @@ class ColourSensor:
             self.package_colour_pub.publish(detect_colour)
             return detected_colour
         else: 
-            self.package_colour_pub.publish(None)
+            self.package_colour_pub.publish('None')
             return None 
     
 if __name__=='__main__':
