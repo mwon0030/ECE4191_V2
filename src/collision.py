@@ -36,7 +36,7 @@ class Collision():
     self.ds_front_right_sub = rospy.Subscriber('/ds_front_right', Float32, self.ds_front_right_cb)
     self.ds_left_sub = rospy.Subscriber('/ds_left', Float32, self.ds_left_cb)
     self.ds_right_sub = rospy.Subscriber('/ds_right', Float32, self.ds_right_cb)
-    self.th = rospy.Subscriber('/state', Float32MultiArray, self.state_cb) 
+    self.state_sub = rospy.Subscriber('/state', Float32MultiArray, self.state_cb) 
 
     
     
@@ -80,6 +80,7 @@ class Collision():
     
     self.obstacle_detect_pub.publish(self.obstacle_detected)
     self.wall_detect_pub.publish(self.wall_detected)
+    rospy.sleep(0.04)
 
 
       

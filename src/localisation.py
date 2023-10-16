@@ -11,9 +11,9 @@ class Localisation():
     self.length = 25 # in cm
     self.width = 21
     self.max_arena_size = [120, 120] # arena dimensions based on home arena 
-    self.wheel_rad = 2.72
+    self.wheel_rad = 2.8
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 22.5 # the distance between the left and right wheels
+    self.wheel_width = 23 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
@@ -22,8 +22,8 @@ class Localisation():
     self.right_dist = 200
     self.left_motor_speed = 0
     self.right_motor_speed = 0
-    self.x = 30
-    self.y = 20
+    self.x = 15
+    self.y = 30
     self.th = np.pi/2
     self.turning = False
     self.send_msg = Float32MultiArray()
@@ -109,9 +109,14 @@ class Localisation():
     left_motor_speed = self.left_motor_speed
     right_motor_speed = self.right_motor_speed
     
-    self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
-    self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
-    self.y = self.y + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
+    if self.turning:
+      self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
+      self.x = self.x
+      self.y = self.y
+    else:
+      self.th = self.th
+      self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
+      self.y = self.y + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
     self.prev_time = time.time()
     print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
