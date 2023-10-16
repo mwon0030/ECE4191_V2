@@ -160,7 +160,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  src/motor_control.py src/motor_control_2.py src/collision.py src/distance_sensor_cluster.py src/localisation.py src/encoder.py src/system.py src/encoder_2.py
+  src/motor_control.py src/motor_control_2.py src/collision.py src/distance_sensor_cluster.py src/localisation.py src/encoder.py src/system.py src/colour_detect.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

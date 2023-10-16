@@ -22,7 +22,7 @@ class Localisation():
     self.right_dist = 200
     self.left_motor_speed = 0
     self.right_motor_speed = 0
-    self.x = 15
+    self.x = 105
     self.y = 30
     self.th = np.pi/2
     self.turning = False
@@ -32,6 +32,8 @@ class Localisation():
 
     self.ref_right_motor_speed = 0
 
+    self.wall_detected = False
+    self.obstacle_detected = False
     
     self.state_pub = rospy.Publisher('state', Float32MultiArray, queue_size=1)
     
@@ -45,7 +47,8 @@ class Localisation():
     # self.obstacle_detection_sub = rospy.Subscriber('/')
     self.set_motor_speed_sub = rospy.Subscriber('/set_' + 'left_motor' + '_speed', Float32, self.set_left_motor_speed_cb)
     self.set_motor_speed_sub = rospy.Subscriber('/set_' + 'right_motor' + '_speed', Float32, self.set_right_motor_speed_cb)
-
+    self.obstacle_detect_sub = rospy.Subscriber('/obstacle_detect', Bool, self.obstacle_detect_cb)
+    self.wall_detect_sub = rospy.Subscriber('/wall_detect', Bool, self.wall_detect_cb)
     
     self.prev_time = time.time()
 
@@ -82,10 +85,16 @@ class Localisation():
     self.turning = data.data
 
   def set_left_motor_speed_cb(self, data):
-      self.ref_left_motor_speed = data.data
+    self.ref_left_motor_speed = data.data
 
   def set_right_motor_speed_cb(self, data):
-      self.ref_right_motor_speed = data.data
+    self.ref_right_motor_speed = data.data
+    
+  def obstacle_detect_cb(self, data):
+    self.obstacle_detected = data.data
+
+  def wall_detect_cb(self, data):
+    self.wall_detected = data.data
   
   def init_localise(self):
     for _ in range(10):
@@ -109,7 +118,11 @@ class Localisation():
     left_motor_speed = self.left_motor_speed
     right_motor_speed = self.right_motor_speed
     
-    if self.turning:
+    if self.obstacle_detected or self.wall_detected:
+      self.th = self.th
+      self.x = self.x
+      self.y = self.y
+    elif self.turning:
       self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
       self.x = self.x
       self.y = self.y
@@ -118,7 +131,7 @@ class Localisation():
       self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
       self.y = self.y + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
     self.prev_time = time.time()
-    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
+    # print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
     # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
     # self.th = self.clamp_angle(self.th)

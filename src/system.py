@@ -54,12 +54,14 @@ class System():
 
     self.goal_location = []
 
-    # self.colour_sensor_trigger_pub = rospy.Publisher('colour_sensor_trigger', Bool, queue_size=1)
-    # self.package_colour_detected_sub = rospy.Subscriber('/package_colour', String, self.package_colour_detected_cb)
+    self.colour_sensor_trigger_pub = rospy.Publisher('colour_sensor_trigger', Bool, queue_size=1)
+    self.package_colour_detected_sub = rospy.Subscriber('/package_colour', String, self.package_colour_detected_cb)
  
     self.default_motor_speed  = 0.6
 
     self.goal_location_publisher = rospy.Publisher('goal_location', Float32MultiArray, queue_size = 1)
+    
+    self.package_colour = "Initialised"
 
   def ds_front_left_cb(self, data):
     self.front_left_sensor_dist = data.data
@@ -206,6 +208,29 @@ class System():
 
     return self.colour_to_goal_location_map[self.package_colour]
 
+  def detect_package(self):
+    for _ in range(10):
+      self.colour_sensor_trigger_pub.publish(True)
+      rospy.sleep(0.05)
+    totalCount = 0
+    while totalCount < 100:
+      redCount = 0
+      blueCount = 0
+      greenCount = 0
+      for _ in range(20):
+        if self.package_colour == "red":
+          redCount += 1
+        elif self.package_colour == "blue":
+          blueCount += 1
+        elif self.package_colour == "green":
+          greenCount += 1
+        rospy.sleep(0.05)
+      colourCount = [redCount, blueCount, greenCount]
+      print("colour: ", colourCount.index(max(colourCount)))
+      totalCount += 1
+    
+      
+
   def deliver_package(self): 
 
     while self.front_left_sensor_dist > 7.5 or self.front_right_sensor_dist > 7.5: 
@@ -340,16 +365,16 @@ class System():
       print('Wall detected')
 
       if self.x > self.max_arena_size/2: # turn left slowly to avoid obstalce
-          angle_increment_to_turn = np.pi/90
+          angle_increment_to_turn = np.pi/179
 
       else: # turn right slowl to avoid obstacle
-          angle_increment_to_turn = -np.pi/90
+          angle_increment_to_turn = -np.pi/179
 
       self.turn(angle_increment_to_turn + self.th, stop = False, motor_turn_speed_control_signal = 0.1)
 
     print('wall avoided')
     
-    self.drive_to_waypoint([15,70])
+    self.drive_to_waypoint([105,70])
     
 
 
@@ -363,7 +388,8 @@ if __name__ == "__main__":
   rospy.sleep(1)
   
   # robot.path_planning()
-  robot.drive_to_waypoint([15,70])
+  robot.detect_package()
+  # robot.drive_to_waypoint([105,70])
   # robot.drive_to_waypoint([30,80])
   # robot.turn(0)
   # robot.turn(-np.pi/2)
