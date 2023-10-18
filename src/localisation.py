@@ -22,7 +22,7 @@ class Localisation():
     self.right_dist = 200
     self.left_motor_speed = 0
     self.right_motor_speed = 0
-    self.x = 105
+    self.x = 30
     self.y = 30
     self.th = np.pi/2
     self.turning = False

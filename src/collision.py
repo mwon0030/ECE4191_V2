@@ -59,7 +59,7 @@ class Collision():
     
     
   def obstacle_detect(self):
-    dist_sensor_readings = {'left': self.left_sensor_dist, 'front-left': self.front_left_sensor_dist, 'front-right': self.front_right_sensor_dist, 'right': self.right_sensor_dist}
+    dist_sensor_readings = { 'front-left': self.front_left_sensor_dist, 'front-right': self.front_right_sensor_dist}
     number_of_sensors_detecting_obstacle = len([sensor for sensor, dist in dist_sensor_readings.items() if dist < self.obstacle_dist_threshold])
 
     is_near_wall = True if self.x < 20 or self.x > 100 or self.y < 20 or self.y > 100 else False 

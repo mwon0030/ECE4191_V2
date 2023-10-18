@@ -3,7 +3,8 @@
 import rospy
 import numpy as np
 from std_msgs.msg import Float32, Bool, Float32MultiArray, String
-import time
+import time 
+from gpiozero import Servo
 
 class System():
   def __init__(self, colour_to_goal_location_map, start_location, goal_locations):
@@ -62,6 +63,8 @@ class System():
     self.goal_location_publisher = rospy.Publisher('goal_location', Float32MultiArray, queue_size = 1)
     
     self.package_colour = "Initialised"
+    
+    # self.servo = Servo(19)
 
   def ds_front_left_cb(self, data):
     self.front_left_sensor_dist = data.data
@@ -209,11 +212,15 @@ class System():
     return self.colour_to_goal_location_map[self.package_colour]
 
   def detect_package(self):
+    print('Waiting 4s before detecting package colour')
+    rospy.sleep(4)
+    print('Detecting package colour.....')
+    colours = ['red', 'blue', 'green']
     for _ in range(10):
       self.colour_sensor_trigger_pub.publish(True)
       rospy.sleep(0.05)
     totalCount = 0
-    while totalCount < 100:
+    while totalCount < 5:
       redCount = 0
       blueCount = 0
       greenCount = 0
@@ -226,22 +233,32 @@ class System():
           greenCount += 1
         rospy.sleep(0.05)
       colourCount = [redCount, blueCount, greenCount]
-      print("colour: ", colourCount.index(max(colourCount)))
+      # print("colour: ", colourCount.index(max(colourCount)))
       totalCount += 1
     
+    print(f'Package colour detected is {colours[colourCount.index(max(colourCount))]}')
+    return colours[colourCount.index(max(colourCount))]
       
-
+      
   def deliver_package(self): 
-
+    
+    print('Moving to delivery location')
     while self.front_left_sensor_dist > 7.5 or self.front_right_sensor_dist > 7.5: 
             self.drive(self.default_motor_speed, self.default_motor_speed + self.right_motor_offset)
 
 
     self.stop()
+    
+    print('Delivering package')
+    # for _ in range(3):
+    #   self.servo.max()
+    #   rospy.sleep(0.76)
 
-    # do servo thing 
-    rospy.sleep(3)
+    #   self.servo.min()
+    #   rospy.sleep(0.88)
 
+    print('Delivering package complete')
+    
   def align_dist_sensor(self): 
     prev_diff_distance_arr = []
     for _ in range(5):
@@ -317,10 +334,11 @@ class System():
 
   
   def path_planning(self):
-    for goal_location in goal_locations:
-      # goal_location = self.determine_goal_location()
-      # goal_location = [90,80]
-
+    while True:
+      package_colour = self.detect_package()
+      goal_location = self.colour_to_goal_location_map[package_colour]
+      print(f'Goal location is {goal_location}')
+      
       # Drive to goal location
       self.goal_location = goal_location
       self.drive_to_waypoint(self.goal_location)
@@ -330,7 +348,7 @@ class System():
       # Commence delivery
       self.deliver_package()
       
-      print("Delivery complete")
+    
       
       # Relocalise
       # Using distance sensors, turn till straight
@@ -381,14 +399,14 @@ class System():
 
 if __name__ == "__main__":
   rospy.init_node('system')
-  colour_to_goal_location_map = {'red': [90, 80], 'green': [25, 80]}
+  colour_to_goal_location_map = {'red': [30, 70], 'green': [25, 80], 'blue': [40,50]}
   goal_locations = [[30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70]]
   start_location = [30,30]
   robot = System(colour_to_goal_location_map, start_location, goal_locations)
   rospy.sleep(1)
   
-  # robot.path_planning()
-  robot.detect_package()
+  robot.path_planning()
+  # robot.detect_package()
   # robot.drive_to_waypoint([105,70])
   # robot.drive_to_waypoint([30,80])
   # robot.turn(0)
