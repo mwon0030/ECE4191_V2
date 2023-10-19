@@ -13,7 +13,7 @@ class Localisation():
     self.max_arena_size = [120, 120] # arena dimensions based on home arena 
     self.wheel_rad = 2.72
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 22.1 # the distance between the left and right wheels
+    self.wheel_width = 21.9 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
@@ -34,6 +34,9 @@ class Localisation():
 
     self.wall_detected = False
     self.obstacle_detected = False
+
+    self.x_localisation_flag = False
+    self.new_x = 0
     
     self.state_pub = rospy.Publisher('state', Float32MultiArray, queue_size=1)
     
@@ -62,6 +65,8 @@ class Localisation():
     with open(file_name, "r") as json_file:
         self.right_motor_duty_cycle_to_motor_speed = json.load(json_file)
 
+    self.update_localisation_flag_sub = rospy.Subscriber('/update_localisation_flag', Bool, self.x_localisation_flag_cb)
+    self.new_x_sub = rospy.Subscriber('/new_x', Float32, self.x_localisation_cb)
     
   def ds_front_left_cb(self, data):
     self.front_left_dist = round(data.data, 4)
@@ -95,6 +100,12 @@ class Localisation():
 
   def wall_detect_cb(self, data):
     self.wall_detected = data.data
+
+  def x_localisation_flag_cb(self, data): 
+    self.x_localisation_flag = data.data
+
+  def x_localisation_cb(self, data): 
+    self.new_x = data.data
   
   def init_localise(self):
     for _ in range(10):
@@ -121,7 +132,11 @@ class Localisation():
     if self.obstacle_detected or self.wall_detected:
       self.th = self.th
       self.x = self.x
-      self.y = self.y
+      self.y = self.y 
+    elif self.x_localisation_flag: 
+      self.x = self.new_x
+      print("X relocalised")
+      self.x_localisation_flag = False
     elif self.turning:
       self.th = self.th + (-(left_motor_speed * self.wheel_circum * self.time - right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
       self.x = self.x

@@ -122,11 +122,13 @@ class System():
     self.obstacle_detect_sub = rospy.Subscriber('/obstacle_detect', Bool, self.obstacle_detect_cb)
     self.wall_detect_sub = rospy.Subscriber('/wall_detect', Bool, self.wall_detect_cb)
 
-    
     self.turning_pub = rospy.Publisher('turning', Bool, queue_size=1)
     self.set_left_motor_speed_pub = rospy.Publisher('set_left_motor_speed', Float32, queue_size=1)
     self.set_right_motor_speed_pub = rospy.Publisher('set_right_motor_speed', Float32, queue_size=1)
 
+    self.new_x_pub = rospy.Publisher('new_x', Float32, queue_size=1)
+    self.update_localisation_pub = rospy.Publisher('update_localisation_flag', Bool, queue_size=1)
+    
     self.state_pub = rospy.Publisher('state', Float32MultiArray, queue_size=1)
 
     self.goal_location = []
@@ -147,6 +149,7 @@ class System():
     pin_OUT = 5
     self.colour_sensor = ColourSensor(pin_S2, pin_S3, pin_OUT)
     self.colour_sensor.setup()
+    
 
   def ds_front_left_cb(self, data):
     self.front_left_sensor_dist = data.data
@@ -351,6 +354,9 @@ class System():
     
     self.align_dist_sensor()
     
+    self.relocalise_x()
+    
+    
     print('Delivering package')
     
     servo = Servo(19)
@@ -416,6 +422,9 @@ class System():
     self.stop()
     
     dist_diff = self.front_left_sensor_dist - self.front_right_sensor_dist
+    
+    print("ultrasonic diff: ", dist_diff)
+    
     prev_dist_diff = dist_diff
     # start alignment when sensors are 0.75 cm apart
     if abs(dist_diff) > 0.75: 
@@ -439,44 +448,29 @@ class System():
         rospy.sleep(0.04)
         
       self.stop()
+
       
+
+  def relocalise_x(self):
+    if self.x < self.max_arena_size/2 : 
+      new_x = min([self.left_sensor_dist, self.right_sensor_dist]) + self.robot_width/2
+      # new_x = 1000
+      self.new_x_pub.publish(new_x)
+    else: 
+      new_x = self.max_arena_size - min([self.left_sensor_dist, self.right_sensor_dist]) - self.robot_width/2
+      # new_x = 1000
+      self.new_x_pub.publish(new_x)
+      
+    print(f'Robot dist: {self.left_sensor_dist + self.right_sensor_dist + self.robot_width}')
+
+    if self.left_sensor_dist + self.right_sensor_dist + self.robot_width < 125 and self.left_sensor_dist + self.right_sensor_dist + self.robot_width > 110:
+      self.update_localisation_pub.publish(True)
+      print(f'New x is {new_x}')
+    else:
+      self.update_localisation_pub.publish(False)
     
-  def localise_dist_sensor(self): 
-    # need to align directly to wall 
-    # self.align_dist_sensor()
-
-    y = self.max_arena_size - (self.front_right_sensor_dist + self.front_right_sensor_dist)/2 - self.robot_length/2
-
-    print(f'y: {y}' )
     
-    # turn to other wall 
-    # if self.x > self.max_arena_size/2: 
-    #   self.turn(0)
-    # else: 
-    #   self.turn(np.pi)
-
-
-    # self.stop()
-
-    # self.align_dist_sensor()
-
-    # x = self.max_arena_size - (self.front_right_sensor_dist + self.front_right_sensor_dist)/2 - self.robot_length/2
-
-    # print(f'x: {x}' )
-    # self.turn(3*np.pi/2)
-
-    # th = -np.pi/2
-
-    # send_msg = Float32MultiArray()
-    # send_msg.data = [x, y, th]
-    # self.state_pub.publish(send_msg)
     
-    # drive backwards 
-    while self.front_left_sensor_dist < 10 or self.front_right_sensor_dist < 10: 
-      self.drive(-self.default_motor_speed, -self.default_motor_speed - self.right_motor_offset)
-    
-    self.stop()
-
   
   def nearest_90_degree_straight_line_angle(self, given_angle):
       # Calculate the remainder when dividing the given angle by 90 degrees
@@ -493,6 +487,15 @@ class System():
       return nearest_angle
   
   def path_planning(self):
+    ## moving servo thing back 
+    servo = Servo(19)
+    for _ in range(1):
+      servo.min()
+      rospy.sleep(0.65)
+      
+    servo.value = 0
+    servo = None
+      
     while True:
       package_colour = self.detect_package()
       goal_location = self.colour_to_goal_location_map[package_colour]
@@ -533,12 +536,16 @@ class System():
       print("Driving home")
 
       self.goal_location =self.start_location
-      self.drive_to_waypoint([self.goal_location[0], self.goal_location[1] + 15 ]) 
-
+      self.drive_to_waypoint([self.goal_location[0], self.goal_location[1] + 15]) 
+            
       new_goal = self.nearest_90_degree_straight_line_angle(self.th * 180/np.pi)*np.pi/180
       self.turn(new_goal)
       
       self.approach_wall()
+      
+      self.align_dist_sensor()
+      self.relocalise_x()
+      
       self.back_away_from_wall()
         
       print("Back in loading zone")
@@ -580,6 +587,9 @@ if __name__ == "__main__":
   rospy.sleep(1)
   
   robot.path_planning()
+  # while True: 
+  #   robot.relocalise_x()
+  #   rospy.sleep(0.04)
   # robot.deliver_package()
   
   # robot.detect_package()
