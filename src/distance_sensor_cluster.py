@@ -37,12 +37,12 @@ class DistanceSensorCluster:
             
             self.distance_sensor_pub[dist_sensor_name].publish(round(self.dist_sensor_name_to_echo[dist_sensor_name].distance * 100, 4))
             # rospy.sleep(0.025)
-        rospy.sleep(0.06)
+        rospy.sleep(0.1)
     
 if __name__ == "__main__":
     rospy.init_node('distance_sensor_cluster')
     
-    front_left_dist_sensor = DistanceSensorInfo(name = 'front_left', ECHO = 11, TRIGGER = 24, offset = 1.1714878453968218)
+    front_left_dist_sensor = DistanceSensorInfo(name = 'front_left', ECHO = 16, TRIGGER = 24, offset = 1.1714878453968218)
     front_right_dist_sensor = DistanceSensorInfo(name = 'front_right', ECHO = 14, TRIGGER = 12, offset = 0.1550070258727576)
     left_dist_sensor = DistanceSensorInfo(name = 'left', ECHO = 23, TRIGGER = 18, offset = 0)
     right_dist_sensor = DistanceSensorInfo(name = 'right', ECHO = 15, TRIGGER = 20, offset = 0)
@@ -57,3 +57,4 @@ if __name__ == "__main__":
             dist_sensor_cls.publish()
         except rospy.ROSInterruptException:
             break
+    

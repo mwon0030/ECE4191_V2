@@ -71,7 +71,7 @@ if __name__ == "__main__":
     
     print('Initialising right motor')
     pin_right_motor_PWM1 = 8
-    pin_right_motor_PWM2 = 16
+    pin_right_motor_PWM2 = 21
     pin_right_motor_EN = 7
     
     right_motor_name = 'right_motor'

@@ -8,9 +8,6 @@
     <node pkg="ece4191" name="encoder"
     type="encoder.py" output="screen" respawn="true" />
 
-    <node pkg="ece4191" name="colour_detect"
-    type="colour_detect.py" output="screen" respawn="true" />
-
     <node pkg="ece4191" name="distance_sensor_cluster"
     type="distance_sensor_cluster.py" output="screen" respawn="true" />
 

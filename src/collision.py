@@ -65,23 +65,26 @@ class Collision():
     is_near_wall = True if self.x < 20 or self.x > 100 or self.y < 20 or self.y > 100 else False 
 
   
-    if not is_near_wall and number_of_sensors_detecting_obstacle > 0: 
-      self.obstacle_detected = True
+    if not(is_near_wall) and number_of_sensors_detecting_obstacle > 0: 
+      # print(f'Number of sensors detecting obstacles {number_of_sensors_detecting_obstacle}')
+      self.obstacle_detected = False
     else: 
       self.obstacle_detected = False
+      # print(f'Number of sensors detecting obstacles {number_of_sensors_detecting_obstacle}')
+      
 
     dist_sensor_readings = {'left': self.left_sensor_dist, 'front-left': self.front_left_sensor_dist, 'front-right': self.front_right_sensor_dist, 'right': self.right_sensor_dist}
     number_of_sensors_detecting_wall = len([sensor for sensor, dist in dist_sensor_readings.items() if dist < self.wall_dist_threshold])
 
     if is_near_wall and number_of_sensors_detecting_wall > 0: 
-      self.wall_detected = True
+      self.wall_detected = False
     else: 
       self.wall_detected = False
 
     
     self.obstacle_detect_pub.publish(self.obstacle_detected)
     self.wall_detect_pub.publish(self.wall_detected)
-    rospy.sleep(0.04)
+    rospy.sleep(0.1)
 
 
       

@@ -11,9 +11,9 @@ class Localisation():
     self.length = 25 # in cm
     self.width = 21
     self.max_arena_size = [120, 120] # arena dimensions based on home arena 
-    self.wheel_rad = 2.8
+    self.wheel_rad = 2.72
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 23 # the distance between the left and right wheels
+    self.wheel_width = 22 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
@@ -131,7 +131,7 @@ class Localisation():
       self.x = self.x + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
       self.y = self.y + ((left_motor_speed * self.wheel_circum * self.time + right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
     self.prev_time = time.time()
-    # print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
+    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
     # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
     # self.th = self.clamp_angle(self.th)

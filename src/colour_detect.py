@@ -2,8 +2,8 @@
 
 import RPi.GPIO as GPIO
 import time
-from std_msgs.msg import Float32, Bool, Float32MultiArray, String
-import rospy
+# from std_msgs.msg import Float32, Bool, Float32MultiArray, String
+# import rospy
 
 
 class ColourSensor: 
@@ -21,9 +21,9 @@ class ColourSensor:
 
         self.start_detecting = False
 
-        self.colour_sensor_trigger_sub = rospy.Subscriber('/colour_sensor_trigger', Bool, self.colour_sensor_trigger_cb)
+        # self.colour_sensor_trigger_sub = rospy.Subscriber('/colour_sensor_trigger', Bool, self.colour_sensor_trigger_cb)
 
-        self.package_colour_pub = rospy.Publisher('package_colour', String, queue_size=1)
+        # self.package_colour_pub = rospy.Publisher('package_colour', String, queue_size=1)
     
     def colour_sensor_trigger_cb(self, data): 
         self.start_detecting = data.data
@@ -72,24 +72,26 @@ class ColourSensor:
         colour_frequencies_keys = {"red": red, "blue": blue, "green": green}
         package_colour = list(colour_frequencies_keys)[package_colour_idx]
         
-        self.package_colour_pub.publish(package_colour)
+        # self.package_colour_pub.publish(package_colour)
         
-        time.sleep(0.05)
+        time.sleep(0.1)
+        
+        return package_colour
     
-if __name__=='__main__':
-    rospy.init_node('colour_detect')
+# if __name__=='__main__':
+#     rospy.init_node('colour_detect')
     
-    pin_S2 = 6 
-    pin_S3 = 13
-    pin_OUT = 5
+#     pin_S2 = 6 
+#     pin_S3 = 13
+#     pin_OUT = 5
 
-    colour_sensor = ColourSensor(pin_S2, pin_S3, pin_OUT)
+#     colour_sensor = ColourSensor(pin_S2, pin_S3, pin_OUT)
 
-    colour_sensor.setup()
+#     colour_sensor.setup()
 
-    while not rospy.is_shutdown():
-        try:
-            if colour_sensor.start_detecting:
-                colour_sensor.detect_loop()
-        except rospy.ROSInterruptException:
-            break
+#     while not rospy.is_shutdown():
+#         try:
+#             if colour_sensor.start_detecting:
+#                 colour_sensor.detect_loop()
+#         except rospy.ROSInterruptException:
+#             break
