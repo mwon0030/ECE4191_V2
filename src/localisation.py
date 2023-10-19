@@ -13,7 +13,7 @@ class Localisation():
     self.max_arena_size = [120, 120] # arena dimensions based on home arena 
     self.wheel_rad = 2.72
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 22 # the distance between the left and right wheels
+    self.wheel_width = 22.1 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
