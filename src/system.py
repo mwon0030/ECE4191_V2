@@ -140,7 +140,7 @@ class System():
 
     self.goal_location_publisher = rospy.Publisher('goal_location', Float32MultiArray, queue_size = 1)
     
-    self.package_colour = "Initialised"
+    self.package_colour = "red"
     
     # self.servo = Servo(19)
     
@@ -195,9 +195,9 @@ class System():
     while distance_to_drive >= self.dist_threshold:
       self.drive(motor_drive_speed_control_signal, motor_drive_speed_control_signal + self.right_motor_offset)
       
-      # # obstacle avoidance
-      # if self.obstacle_detected and distance_to_drive > 20:
-      #   self.obstacle_avoidance()
+      # obstacle avoidance
+      if self.obstacle_detected:
+        self.avoid_obstacle()
 
       # if self.wall_detected and distance_to_drive > 20: 
       #   self.wall_avoidance()
@@ -480,7 +480,10 @@ class System():
         return given_angle
       
       # Determine the nearest 90-degree straight-line angle
-      nearest_angle = given_angle + (90 - remainder)
+      if self.package_colour == "red":
+        nearest_angle = given_angle - remainder
+      else:
+        nearest_angle = given_angle + (90 - remainder)
       
       print(nearest_angle)
       
@@ -497,8 +500,8 @@ class System():
     servo = None
       
     while True:
-      package_colour = self.detect_package()
-      goal_location = self.colour_to_goal_location_map[package_colour]
+      self.package_colour = self.detect_package()
+      goal_location = self.colour_to_goal_location_map[self.package_colour]
       print(f'Goal location is {goal_location}')
       
       # Drive to goal location
@@ -506,13 +509,13 @@ class System():
       self.drive_to_waypoint(self.goal_location) 
 
 
-      if self.goal_location[0] != 30:
+      # if self.goal_location[0] != 30:
 
         # scaled_angle = round(self.th / (np.pi/2))
         # new_goal = scaled_angle * (np.pi/2)
         # self.turn(new_goal)
-        new_goal = self.nearest_90_degree_straight_line_angle(self.th * 180/np.pi)*np.pi/180
-        self.turn(new_goal)
+      new_goal = self.nearest_90_degree_straight_line_angle(self.th * 180/np.pi)*np.pi/180
+      self.turn(new_goal)
 
 
       print("Goal reached!") 
@@ -573,19 +576,143 @@ class System():
       self.turn(angle_increment_to_turn + self.th, stop = False, motor_turn_speed_control_signal = 0.2)
 
     print('wall avoided')
-  
+    
+  def turn_obstacle(self, goal_angle, stop = True, motor_turn_speed_control_signal = 0.4):
+    self.is_turning = True
+    self.turning_pub.publish(self.is_turning)
+    angle_error = abs(goal_angle - self.th)
+
+    while angle_error > np.pi/90:
+      if goal_angle > self.th:
+        self.drive(-motor_turn_speed_control_signal, motor_turn_speed_control_signal + self.right_motor_offset)
+        
+      elif goal_angle < self.th:
+        self.drive(motor_turn_speed_control_signal, -motor_turn_speed_control_signal - self.right_motor_offset)
+        
+      # if angle_error < 12 * self.angle_threshold:
+      #   motor_turn_speed_control_signal = 0.2
+
+      angle_error = abs(goal_angle - self.th)
+      self.turning_pub.publish(self.is_turning)
+    
+    print("Turn Complete")
+    
+    if stop:
+      self.stop()
+      print("Stopped Turning")
+    
+    self.is_turning = False
+    self.turning_pub.publish(self.is_turning)
+    
+  def nearest_horizontal_90_degrees(self, given_angle): 
+    # Calculate the remainder when dividing the given angle by 90 degrees
+      remainder = given_angle % 90
+      
+      if remainder < 5: 
+        return given_angle
+      
+      # Determine the nearest 90-degree straight-line angle
+      nearest_angle = given_angle - remainder
+      
+      print(nearest_angle)
+      
+      return nearest_angle
+
+  def turn_to_avoid_obstacle(self): 
+    # dist_readings = [self.front_left_sensor_dist, self.front_right_sensor_dist]
+    
+    # if min(dist_readings) < 15: 
+    #   while min(dist_readings) < 15: 
+    #     if self.x > self.max_arena_size/2: # turn left slowly to avoid obstalce
+    #         angle_increment_to_turn = np.pi/15
+
+    #     else: # turn right slowl to avoid obstacle
+    #         angle_increment_to_turn = -np.pi/15
+
+    #     self.turn_obstacle(angle_increment_to_turn + self.th, stop = False, motor_turn_speed_control_signal = 0.3)
+    #     dist_readings = [self.front_left_sensor_dist, self.front_right_sensor_dist]
+      
+    #   print('Doing additonal turn')
+    #   self.stop()
+      
+    #   ## safety turn
+    #   if self.x > self.max_arena_size/2: # turn left slowly to avoid obstalce
+    #       additional_turn_angle = np.pi/20
+
+    #   else: # turn right slowl to avoid obstacle
+    #       additional_turn_angle = -np.pi/20
+         
+    #   self.turn_obstacle(additional_turn_angle + self.th, stop = False, motor_turn_speed_control_signal = 0.3)
+
+    #   self.stop()
+    
+    xyz = self.nearest_90_degree_straight_line_angle(self.th)
+    
+    if self.x > self.max_arena_size/2: # turn left slowly to avoid obstalce
+      angle_to_turn = np.pi/3
+
+    else: # turn right slowl to avoid obstacle
+      angle_to_turn = -np.pi/3
+      
+    new_angle = xyz + angle_to_turn
+    
+    print(f'Obstacle angle: {new_angle}')
+            
+    self.turn(new_angle, stop = True, motor_turn_speed_control_signal = 0.3)
+    
+    self.stop()
+    rospy.sleep(0.1)
+    
+    # new_goal = self.nearest_horizontal_90_degrees(self.th * 180/np.pi)*np.pi/180
+    # self.turn(new_goal)
+
+    
+    # new_x = dist_to_drive*np.cos(self.th) + self.x
+    # new_y = dist_to_drive*np.sin(self.th) + self.y
+    
+    
+  def avoid_obstacle(self): 
+    print('Avoiding Obstacle')
+    initial_x = self.x
+    initial_y = self.y
+    dist_to_travel = 30
+    dist_travelled = self.distance_from_goal([initial_x, initial_y])
+    self.turn_to_avoid_obstacle()
+    
+    self.stop()
+    
+    while dist_travelled < dist_to_travel: 
+      self.drive(left_motor_speed = 0.4, right_motor_speed = 0.4)
+      
+      dist_travelled = self.distance_from_goal([initial_x, initial_y])
+      
+
+    # self.stop()
+    
+    
+    
+    # goal_angle = self.angle_to_turn([30, 80]) + self.th # Relative goal angle + global current angle = global goal angle
+    
+    # turning to goal
+    goal_angle = self.angle_to_turn(self.goal_location) + self.th
+    print("goal angle: ", goal_angle)
+    self.turn(goal_angle)
+    
+    
+    
     
 
 
 
 if __name__ == "__main__":
   rospy.init_node('system')
-  colour_to_goal_location_map = {'red': [30, 90], 'green': [90, 90], 'blue': [60,90]}
+  colour_to_goal_location_map = {'red': [19, 90], 'green': [95, 90], 'blue': [60,90]}
   # goal_locations = [[30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70], [30, 70]]
   start_location = [30,30]
   robot = System(colour_to_goal_location_map, start_location)
   rospy.sleep(1)
   
+  # robot.avoid_obstacle()
   robot.path_planning()
   # while True: 
   #   robot.relocalise_x()

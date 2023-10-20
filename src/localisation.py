@@ -23,7 +23,7 @@ class Localisation():
     self.left_motor_speed = 0
     self.right_motor_speed = 0
     self.x = 30
-    self.y = 30
+    self.y = 20
     self.th = np.pi/2
     self.turning = False
     self.send_msg = Float32MultiArray()
